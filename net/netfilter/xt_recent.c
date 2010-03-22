@@ -261,7 +261,7 @@ recent_mt(const struct sk_buff *skb, const struct xt_match_param *par)
 			if (info->seconds && time_after(time, e->stamps[i]))
 				continue;
 
-			if (info->hit_count && ++hits >= info->hit_count) {
+			if (!info->hit_count || ++hits >= info->hit_count) {
 				ret = !ret;
 				break;
 			}
