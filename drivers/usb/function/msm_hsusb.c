@@ -51,6 +51,7 @@
 #include <mach/board_lge.h>
 #endif /* CONFIG_MACH_LGE */
 
+#include <mach/lge_diag_test.h>
 #define MSM_USB_BASE ((unsigned) ui->addr)
 
 #include "usb_function.h"
@@ -80,6 +81,9 @@
 static int pid = 0x618E;   /* Diag + Modem + NMEA + Mass storage + ADB*/ 
 #else	/* origin */
 static int pid = 0x9018;
+#endif
+#if defined (CONFIG_USB_SUPPORT_LGDRIVER)
+static int ADB_state = 0; 
 #endif
 
 struct usb_fi_ept {
@@ -2436,6 +2440,10 @@ void usb_function_enable(const char *function, int enable)
 	int i;
 #if defined(CONFIG_USB_SUPPORT_LGE_FACTORY_USB)
 	int nCableType = msm_chg_LG_cable_type();
+   ADB_state = enable; 
+
+   if(if_condition_is_on_ADB_SET)
+       return;
 #endif
 
 	if (!ui)
@@ -4185,5 +4193,10 @@ int usb_function_unregister(struct usb_function *func)
 }
 EXPORT_SYMBOL(usb_function_unregister);
 
+int LG_USB_GET_ADB_STATE(void)
+{
+    return ADB_state;
+}
+EXPORT_SYMBOL(LG_USB_GET_ADB_STATE);
 MODULE_LICENSE("GPL");
 
