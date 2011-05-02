@@ -86,6 +86,7 @@ struct msm_pm_platform_data msm7x27_pm_data[MSM_PM_SLEEP_MODE_NR] = {
 #endif
 
 /* board-specific usb data definitions */
+/*
 #ifdef CONFIG_USB_SUPPORT_LGDRIVER
 struct usb_mass_storage_platform_data usb_mass_storage_pdata = {
 	.nluns          = 0x01,
@@ -95,62 +96,119 @@ struct usb_mass_storage_platform_data usb_mass_storage_pdata = {
 	.release        = 0xffff,
 };
 #endif
-
+*/
+/* For supporting LG Android gadget framework, move android gadget platform
+ * datas to specific board file
+ * [younsuk.song@lge.com] 2010-07-11
+ */
 #ifdef CONFIG_USB_ANDROID
 /* dynamic composition */
+/* This depends on each board. QCT original is at device_lge.c */
+/* function bit : (in include/linux/usb/android.h)
+   ADB              0x0001
+   MSC              0x0002
+   ACM_MODEM        0x0003
+   DIAG             0x0004
+   ACM_NMEA         0x0005
+   GENERIC_MODEM    0x0006
+   GENERIC_NMEA     0x0007
+   CDC_ECM          0x0008
+   RMNET            0x0009
+   RNDIS            0x000A
+   MTP              0x000B
+   AUTORUN			0x000C
+ */
 struct usb_composition usb_func_composition[] = {
 	{
-		.product_id         = 0x9015,
-		/* MSC + ADB */
-		.functions	    = 0x12 /* 10010 */
+		/* Full mode : ADB, UMS, NMEA, DIAG, MODEM */
+		/* Light mode : UMS, NMEA, DIAG, MODEM */
+		.product_id         = 0x618E, 
+		.functions	    	= 0x2743,
+	//	.product_id         = 0x61C5, 
+	//	.functions			= 0x2,
+		.adb_product_id     = 0x618E,
+		.adb_functions	    = 0x12743,
 	},
 	{
-		.product_id         = 0xF000,
-		/* MSC */
-		.functions	    = 0x02, /* 0010 */
+		/* Factory mode for CMDA : DIAG, MODEM */
+		/* We are in factory mode, ignore adb function */
+		.product_id         = 0x6000,
+		.functions	    	= 0x43,
+		.adb_product_id     = 0x6000,
+		.adb_functions	    = 0x43,
+	},
+#ifdef CONFIG_USB_GADGET_LG_MTP_DRIVER	
+    {
+		/* We support MTP */
+        .product_id         = 0x61C7,
+        .functions          = 0xB, /* MTP*/
+        .adb_product_id     = 0x61C7,
+	    .adb_functions	    = 0xB,
+    },
+#endif
+#ifdef CONFIG_USB_ANDROID_CDC_ECM
+    {
+		/* LG Rmnet Driver for matching LG Android Net driver */
+        .product_id         = 0x61A2,
+        .functions          = 0x27384,
+        .adb_product_id     = 0x61A1,
+	    .adb_functions	    = 0x127384,
+    },
+#endif
+/* LGE_CHANGE_S : For Autorun */
+#ifdef CONFIG_USB_SUPPORT_LGE_ANDROID_AUTORUN 
+	{
+		/* Mass Storage Only for autorun */
+		.product_id         = 0x61C6,
+		.functions	    	= 0x2,
+		.adb_product_id     = 0x61C6,
+		.adb_functions	    = 0x2,
 	},
 	{
-		.product_id         = 0xF005,
-		/* MODEM ONLY */
-		.functions	    = 0x03,
+		/* For AutoRun, we use UMS function as CD-ROM drive */
+		.product_id         = 0x61C8,
+		.functions	   		= 0xC,
+		.adb_product_id     = 0x61C8,
+		.adb_functions	    = 0xC,
 	},
-
+#endif
+/* LGE_CHANGE_E : For Autorun */
+#ifdef CONFIG_USB_ANDROID_RNDIS
 	{
-		.product_id         = 0x8080,
-		/* DIAG + MODEM */
-		.functions	    = 0x34,
+		/* RNDIS */
+		.product_id         = 0xF00E,
+		.functions	    	= 0xA,
+		.adb_product_id     = 0x9024,
+		.adb_functions	    = 0x1A,
 	},
+#endif
+//20101117 yongman.kwon@lge.com [MS690] add UMS only mode [START]
 	{
-		.product_id         = 0x8082,
-		/* DIAG + ADB + MODEM */
-		.functions	    = 0x0314,
+		/* Mass Storage Only */
+		.product_id 		= 0x61B7,
+		.functions			= 0x2,
+		.adb_product_id 	= 0x61B7,
+		.adb_functions		= 0x2,
 	},
-	{
-		.product_id         = 0x8085,
-		/* DIAG + ADB + MODEM + NMEA + MSC*/
-		.functions	    = 0x25314,
-	},
-	{
-		.product_id         = 0x9016,
-		/* DIAG + GENERIC MODEM + GENERIC NMEA*/
-		.functions	    = 0x764,
-	},
-	{
-		.product_id         = 0x9017,
-		/* DIAG + GENERIC MODEM + GENERIC NMEA + MSC*/
-		.functions	    = 0x2764,
-	},
-	{
-		.product_id         = 0x9018,
-		/* DIAG + ADB + GENERIC MODEM + GENERIC NMEA + MSC*/
-		.functions	    = 0x27614,
-	},
-	{
-		.product_id         = 0xF009,
-		/* CDC-ECM*/
-		.functions	    = 0x08,
-	}
+//20101117 yongman.kwon@lge.com [MS690] add UMS only mode [END]
 };
+
+#define VENDOR_QCT	0x05C6
+#define VENDOR_LGE	0x1004
+
+struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id	= VENDOR_LGE,
+	.version	= 0x0100,
+	.compositions   = usb_func_composition,
+	.num_compositions = ARRAY_SIZE(usb_func_composition),
+	.product_name       = "LG Android USB Device",
+	.manufacturer_name	= "LG Electronics Inc.",
+	.serial_number		= "LGANDROIDVS740",	
+	.init_product_id	= 0x618E,
+};
+
+#endif /* CONFIG_USB_ANDROID */
+/*
 struct android_usb_platform_data android_usb_pdata = {
 	.vendor_id	= 0x05C6,
 	.product_id	= 0x9018,
@@ -162,6 +220,8 @@ struct android_usb_platform_data android_usb_pdata = {
 	.manufacturer_name = "Qualcomm Incorporated",
 	.nluns = 1,
 };
+*/
+/*
 static struct platform_device android_usb_device = {
 	.name	= "android_usb",
 	.id		= -1,
@@ -170,7 +230,8 @@ static struct platform_device android_usb_device = {
 	},
 };
 #endif
-
+*/
+/*
 #ifdef CONFIG_USB_SUPPORT_LGDRIVER
 static struct usb_function_map usb_functions_map[] = {
 	{"modem", 0},
@@ -186,124 +247,125 @@ static struct usb_function_map usb_functions_map[] = {
 	{"ethernet", 5},
 };
 
-/* dynamic composition */
+// dynamic composition 
+
 struct usb_composition usb_func_composition[] = {
 #ifdef CONFIG_USB_SUPPORT_LGDRIVER_LEGACY
 	{
 		.product_id         = 0x9018,
-		.functions	    = 0x1F, /* 011111 */
+		.functions	    = 0x1F, // 011111 
 	},
 	{
 		.product_id         = 0x901A,
-		.functions          = 0x0F, /* 01111 */
+		.functions          = 0x0F, // 01111 
 	},
 	{
 		.product_id 		  = 0x6000,
-		.functions			  = 0x03 /* 000011 	Diag, Modem*/
+		.functions			  = 0x03 // 000011 	Diag, Modem
 	},
 	{
 		.product_id 		  = 0x6004,
-		.functions			  = 0x08, /* 01000 	ADB only*/
+		.functions			  = 0x08, // 01000 	ADB only
 	},
 	{
 		.product_id 		  = 0x6002,
-		.functions			  = 0x0B, /* 01011 	Diag, Modem, ADB*/
+		.functions			  = 0x0B, // 01011 	Diag, Modem, ADB
 	},
 	{
 		.product_id 		  = 0x6003,
-		.functions			  = 0x12, 	/* 00010	Diag only, Mass Storage*/
+		.functions			  = 0x12, 	// 00010	Diag only, Mass Storage
 	},
 	{
 		.product_id 		  = 0x6001,
-		.functions			  = 0x10, /* 10000 	mass storage only*/
+		.functions			  = 0x10, // 10000 	mass storage only
 	},
 	{
 		.product_id 		  = 0x6005,
-		.functions			  = 0x18, /* 11000 	mass storage, ADB*/
+		.functions			  = 0x18, // 11000 	mass storage, ADB
 	},	
 	{
 		.product_id 		  = 0x6171,
-		.functions			  = 0x1A, /* 01010 	Diag, ADB, Mass storage*/
+		.functions			  = 0x1A, // 01010 	Diag, ADB, Mass storage
 	},	
 #else
 	{
 		.product_id         = 0x9012,
-		.functions	    = 0x5, /* 0101 */
+		.functions	    = 0x5, // 0101 
 	},
 
 	{
 		.product_id         = 0x9013,
-		.functions	    = 0x15, /* 10101 */
+		.functions	    = 0x15, // 10101 
 	},
 
 	{
 		.product_id         = 0x9014,
-		.functions	    = 0x30, /* 110000 */
+		.functions	    = 0x30, // 110000 
 	},
 
 	{
 		.product_id         = 0x9016,
-		.functions	    = 0xD, /* 01101 */
+		.functions	    = 0xD, // 01101 
 	},
 
 	{
 		.product_id         = 0x9017,
-		.functions	    = 0x1D, /* 11101 */
+		.functions	    = 0x1D, // 11101 
 	},
 
 	{
 		.product_id         = 0xF000,
-		.functions	    = 0x10, /* 10000 */
+		.functions	    = 0x10, // 10000 
 	},
 
 	{
 		.product_id         = 0xF009,
-		.functions	    = 0x20, /* 100000 */
+		.functions	    = 0x20, // 100000 
 	},
 	{
 		.product_id 		  = 0x6000,
-		.functions			  = 0x07 /* 000111 	NMEA, Diag, Modem*/
+		.functions			  = 0x07 // 000111 	NMEA, Diag, Modem
 	},
 	{
 		.product_id 		  = 0x6001,
-		.functions			  = 0x17 /* 010111 	NMEA, Diag, Modem,ADB*/
+		.functions			  = 0x17 // 010111 	NMEA, Diag, Modem,ADB
 	},
     {
         .product_id           = 0x6002,
-        .functions            = 0x18 /* 011000  Mass, ADB*/
+        .functions            = 0x18 // 011000  Mass, ADB
     },
     {
         .product_id           = 0x6003,
-        .functions            = 0x0F /* 001111  Modem,diag,NMEA,Mass*/
+        .functions            = 0x0F // 001111  Modem,diag,NMEA,Mass
     },
 	{
 		.product_id 		  = 0x618E,
-		.functions			  = 0x1F /* 011111 	Modem,diag,NMEA,Mass,ADB*/
+		.functions			  = 0x1F // 011111 	Modem,diag,NMEA,Mass,ADB
 	},
 	{
 		.product_id 		  = 0x618F,
-        .functions            = 0x08 /* 001000  Mass*/
+        .functions            = 0x08 // 001000  Mass
 	},
 #endif
 };
 #endif
 
-#ifdef CONFIG_USB_SUPPORT_LGDRIVER
+//#ifdef CONFIG_USB_SUPPORT_LGDRIVER
 struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.version	= 0x0100,
-	.phy_info	= (USB_PHY_INTEGRATED | USB_PHY_MODEL_65NM),
+//	.phy_info	= (USB_PHY_INTEGRATED | USB_PHY_MODEL_65NM),
 	.vendor_id          = 0x1004,
 	.product_name       = "LG Mobile USB Modem",
 	.serial_number		= "LGANDROIDVS740",	
 	.manufacturer_name	= "LG Electronics Inc.",
 	.compositions	= usb_func_composition,
 	.num_compositions = ARRAY_SIZE(usb_func_composition),
-	.function_map   = usb_functions_map,
-	.num_functions	= ARRAY_SIZE(usb_functions_map),
+//	.function_map   = usb_functions_map,
+//	.num_functions	= ARRAY_SIZE(usb_functions_map),
 	.config_gpio    = NULL,
 };
 #endif
-
+*/
 static struct diagcmd_platform_data lg_fw_diagcmd_pdata = {
 	.name = "lg_fw_diagcmd",
 };

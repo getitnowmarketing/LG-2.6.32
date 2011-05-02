@@ -3943,7 +3943,7 @@ int mass_storage_function_add(struct usb_composite_dev *cdev,
 	struct usb_configuration *c, int autorun_enable)
 #else
 int mass_storage_function_add(struct usb_composite_dev *cdev,
-	struct usb_configuration *c, int nluns)
+	struct usb_configuration *c)
 #endif
 {
 	int		rc;
