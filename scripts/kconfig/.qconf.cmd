@@ -1,1 +1,0 @@
-cmd_scripts/kconfig/qconf := g++  -o scripts/kconfig/qconf  scripts/kconfig/kconfig_load.o scripts/kconfig/zconf.tab.o  scripts/kconfig/qconf.o -lncurses -L/usr/X11R6/lib -lqt-mt -laudio -lXt -ljpeg -lpng -lz -lXi -lXrender -lXrandr -lXcursor -lXinerama -lXft -lfreetype -lfontconfig -lXext -lX11 -lm -lSM -lICE -ldl -lpthread   -ldl
