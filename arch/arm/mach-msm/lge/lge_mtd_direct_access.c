@@ -79,20 +79,22 @@ static int test_init(void)
 
 static int test_erase_block(void)
 {
+	int normal_block_seq = 0;
 	int i;
 	int err;
 
 	/* Erase eraseblock */
 	printk(KERN_INFO"%s: erasing block\n", __func__);
 
-	for (i = 0; i < ebcnt; i++) {
+	for (i = 0; i < ebcnt; ++i) {
 		if (bbt[i])
 			continue;
-		else
+		if (i == target_block)
 			break;
+		normal_block_seq++;
 	}
 
-	err = lge_erase_block(i);
+	err = lge_erase_block(normal_block_seq);
 	if (err) {
 		printk(KERN_INFO"%s: erased %u block fail\n", __func__, i);
 		return err;
@@ -106,6 +108,7 @@ static int test_write_block(const char *val, struct kernel_param *kp)
 {
 	int i;
 	int err;
+	int normal_block_seq = 0;
 	unsigned char *test_string;
 	unsigned long flag=0;
 
@@ -121,14 +124,15 @@ static int test_write_block(const char *val, struct kernel_param *kp)
 	test_erase_block();
 	printk(KERN_INFO"%s: writing block: flag = %d\n", __func__,flag);
 
-	for (i = 0; i < ebcnt; i++) {
+	for (i = 0; i < ebcnt; ++i) {
 		if (bbt[i])
 			continue;
-		else
+		if (i == target_block)
 			break;
+		normal_block_seq++;
 	}
 
-	err = lge_write_block(i, test_string, strlen(test_string));
+	err = lge_write_block(normal_block_seq, test_string, strlen(test_string));
 	if (err) {
 		printk(KERN_INFO"%s: write %u block fail\n", __func__, i);
 		return err;
@@ -146,20 +150,22 @@ static int test_read_block(char *buf, struct kernel_param *kp)
 {
 	int i;
 	int err;
+	int normal_block_seq = 0;
 	unsigned char status=0;
 	char* temp = "1";
 
 	printk(KERN_INFO"%s: read block\n", __func__);
 	test_init();
 
-	for (i = 0; i < ebcnt; i++) {
+	for (i = 0; i < ebcnt; ++i) {
 		if (bbt[i])
 			continue;
-		else
+		if (i == target_block)
 			break;
+		normal_block_seq++;
 	}
 
-	err = lge_read_block(i, global_buf);
+	err = lge_read_block(normal_block_seq, global_buf);
 	if (err) {
 		printk(KERN_INFO"%s: read %u block fail\n", __func__, i);
 		goto error;

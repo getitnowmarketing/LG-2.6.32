@@ -1292,11 +1292,6 @@ void diagpkt_process_request (void *req_pkt, uint16 pkt_len,
 	if (!found) {
 		printk(KERN_ERR "LG_FW : diagpkt_process_request: Did not find match in user table \n");
 	}
-  
-	//jihoon.lee - clear req_pkt so that current diag events do not affect the post, if it is not press and release events will be odd.
-	//for example, send key followed by number of keys will be missed.
-	//LG_FW khlee bug fix 
-	memset(req_pkt , 0 , 	pkt_len);
 	return;
 }
 /* diagpkt_process_request */

@@ -20,7 +20,6 @@
 
 extern uint8_t if_condition_is_on_key_buffering;
 extern uint8_t if_condition_is_on_air_plain_mode;
-extern uint8_t if_condition_is_on_ADB_SET;
 extern uint8_t lgf_factor_key_test_rsp(char);
 
 extern int eta_execute_n(char *, size_t);

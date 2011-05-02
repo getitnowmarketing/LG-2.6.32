@@ -51,7 +51,6 @@
 #include <mach/board_lge.h>
 #endif /* CONFIG_MACH_LGE */
 
-#include <mach/lge_diag_test.h>
 #define MSM_USB_BASE ((unsigned) ui->addr)
 
 #include "usb_function.h"
@@ -2481,9 +2480,6 @@ void usb_function_enable(const char *function, int enable)
    /* LGE_CHANGE_S [kyukyung.lee@lge.com] 2010.04.03*/   
    /* we'd like to change the ADB setting value without composite switching*/
    ADB_state = enable;
-
-   if(if_condition_is_on_ADB_SET)
-       return;
 #endif
 	pr_info("%s: name = %s, enable = %d\n", __func__, function, enable);
 	

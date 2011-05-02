@@ -1017,36 +1017,6 @@ void* LGF_TestModeVer(	test_mode_req_type* pReq ,DIAG_TEST_MODE_F_rsp_type	*pRsp
 
 	return pRsp;
 }
-boolean if_condition_is_on_ADB_SET = FALSE;
-extern int LG_USB_GET_ADB_STATE(void);
-
-void* adb_defaut_setting(
-	test_mode_req_type* pReq ,
-	DIAG_TEST_MODE_F_rsp_type *pRsp)
-{
-    pRsp->ret_stat_code = TEST_OK_S;
-
-    if_condition_is_on_ADB_SET = TRUE;  // to block the USB composite switching
-    
-    if( pReq->motor == 0)
-    {
-        if (diagpdev != NULL){
-            update_diagcmd_state(diagpdev, "ADBSET", 0);
-        }
-        else 
-        {
-            printk("\n[%s] error ADB SET", __func__ );        
-            pRsp->ret_stat_code = TEST_NOT_SUPPORTED_S;
-        }
-    }
-    else if(pReq->motor == 1)
-    {
-        pRsp->test_mode_rsp.memory_check = (char)LG_USB_GET_ADB_STATE();
-        pRsp->ret_stat_code = TEST_OK_S;
-
-    }
-     return pRsp;
-}
 
 /*  USAGE
  *    1. If you want to handle at ARM9 side, you have to insert fun_ptr as NULL and mark ARM9_PROCESSOR
@@ -1115,6 +1085,5 @@ testmode_user_table_entry_type testmode_mstr_tbl[TESTMODE_MSTR_TBL_SIZE] =
 	{ TEST_MODE_MAC_READ_WRITE,    linux_app_handler,        ARM11_PROCESSOR },
 	/*90~	*/
 	{ TEST_MODE_DB_INTEGRITY_CHECK,		LGF_TestModeDBIntegrityCheck,	ARM11_PROCESSOR},
-    {TEST_MODE_ADB_SETTIMG , adb_defaut_setting, ARM11_PROCESSOR},
 };
 
