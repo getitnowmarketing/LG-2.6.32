@@ -74,8 +74,6 @@ void lge_melfas_vdd(UINT8 enable);
 /* shoud be checked, what is the difference, TOUCH_SEARCH and KEY_SERACH, TOUCH_BACK  and KEY_BACK */
 //#define LG_FW_AUDIO_HAPTIC_TOUCH_SOFT_KEY
 
-#define TS_POLLING_TIME 0 /* msec */
-
 #define DEBUG_TS 0 /* enable or disable debug message */
 #if DEBUG_TS
 #define DMSG(fmt, args...) printk(KERN_DEBUG fmt, ##args)
@@ -116,7 +114,7 @@ struct mcs6000_ts_device {
 	int sda_gpio;
 	bool pendown;
 	int (*power)(unsigned char onoff);
-	
+	int poll_interval;
 	struct workqueue_struct *ts_wq;
 };
 
@@ -155,7 +153,6 @@ void Send_Touch( unsigned int x, unsigned int y)
 	input_mt_sync(mcs6000_ts_dev.input_dev);
 	input_sync(mcs6000_ts_dev.input_dev);
 #else
-	mcs6000_ts_event_touch( x, y , &mcs6000_ts_dev) ;
 	input_report_abs(mcs6000_ts_dev.input_dev, ABS_X, x);
 	input_report_abs(mcs6000_ts_dev.input_dev, ABS_Y, y);
 	input_report_key(mcs6000_ts_dev.input_dev, BTN_TOUCH, 0);
@@ -389,8 +386,7 @@ static void mcs6000_work(struct work_struct *work)
 
 touch_retry:
 	if (dev->pendown) {
-		//ret = schedule_delayed_work(&dev->work, msecs_to_jiffies(TS_POLLING_TIME));
-		queue_delayed_work(dev->ts_wq, &dev->work,msecs_to_jiffies(TS_POLLING_TIME));
+		queue_delayed_work(dev->ts_wq, &dev->work, msecs_to_jiffies(dev->poll_interval));
 	} else {
 		enable_irq(dev->num_irq);
 		DMSG("%s: irq enable\n", __FUNCTION__);
@@ -404,8 +400,7 @@ static irqreturn_t mcs6000_ts_irq_handler(int irq, void *handle)
 	if (gpio_get_value(dev->intr_gpio) == 0) {
 		disable_irq_nosync(dev->num_irq);
 		DMSG("%s: irq disable\n", __FUNCTION__);
-		//schedule_delayed_work(&dev->work, 0);
-		queue_delayed_work(dev->ts_wq, &dev->work,msecs_to_jiffies(TS_POLLING_TIME));
+		queue_delayed_work(dev->ts_wq, &dev->work,msecs_to_jiffies(dev->poll_interval));
 	}
 
 	return IRQ_HANDLED;
@@ -559,7 +554,6 @@ int mcs6000_ts_ioctl_down(struct inode *inode, struct file *flip, unsigned int c
 
 	dev = &mcs6000_ts_dev;
 
-	//printk(KERN_INFO"%d\n", _IOC_NR(cmd));
 	if (_IOC_NR(cmd) >= MCS6000_TS_DOWN_IOCTL_MAXNR)
 		return -EINVAL;
 
@@ -609,10 +603,8 @@ int mcs6000_ts_ioctl_down(struct inode *inode, struct file *flip, unsigned int c
 			break;
 
 		case MCS6000_TS_DOWN_IOCTL_I2C_ENABLE:
-			//mcs6000_ts_down_i2c_block_enable(1);
 			break;
 		case MCS6000_TS_DOWN_IOCTL_I2C_DISABLE:
-			//mcs6000_ts_down_i2c_block_enable(0);
 			break;
 
 		case MCS6000_TS_DOWN_IOCTL_I2C_READ:
@@ -761,7 +753,6 @@ static ssize_t read_touch_status(struct device *dev, struct device_attribute *at
 
 	dev_tmp = &mcs6000_ts_dev;
 	vreg_touch = vreg_get(0, "synt");
-	//printk ("Vreg_touch info : name [%s], id [%d],status[%d], refcnt[%d]\n",vreg_touch->name,vreg_touch->id,vreg_touch->status,vreg_touch->refcnt);
 	int_status = gpio_get_value(dev_tmp->intr_gpio);
 	r = sprintf(buf,"MCS6000 interrupt Pin [%d] , power Status [%d]\n",int_status,vreg_touch->refcnt);
 	return r;
@@ -804,10 +795,42 @@ static ssize_t write_touch_control(struct device *dev, struct device_attribute *
 	return size;
 }
 
+static ssize_t
+read_mcs6000_poll(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct mcs6000_ts_device *dev_tmp;
+
+	dev_tmp = &mcs6000_ts_dev;
+
+	return snprintf(buf, PAGE_SIZE, "MCS-6000 polling time is %d msec\n", dev_tmp->poll_interval);
+}
+
+static ssize_t
+write_mcs6000_poll(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mcs6000_ts_device *dev_tmp;
+
+	dev_tmp = &mcs6000_ts_dev;
+
+	int val;
+
+	if (sscanf(buf, "%d", &val) != 1)
+		return -EINVAL;
+
+	if ((val < 0) || (val > 100)) {
+		return -EINVAL;
+	}
+
+	dev_tmp->poll_interval = val;
+
+	return count;
+}
+
 static DEVICE_ATTR(touch_control, S_IRUGO|S_IWUSR,NULL,write_touch_control);
 static DEVICE_ATTR(touch_status, S_IRUGO,read_touch_status, NULL);
 static DEVICE_ATTR(version, S_IRUGO /*| S_IWUSR*/,read_touch_version, NULL);
 static DEVICE_ATTR(dl_status, S_IRUGO,read_touch_dl_status, NULL);
+static DEVICE_ATTR(poll, S_IRUGO | S_IWUSR, read_mcs6000_poll, write_mcs6000_poll);
 
 int mcs6000_create_file(struct input_dev *pdev)
 {
@@ -841,6 +864,13 @@ int mcs6000_create_file(struct input_dev *pdev)
 		return ret;
 	}
 
+	ret = device_create_file(&pdev->dev, &dev_attr_poll);
+	if (ret) {
+		printk( KERN_DEBUG "LG_FW : dev_attr_poll create fail\n");
+		device_remove_file(&pdev->dev, &dev_attr_poll);
+		return ret;
+	}
+
 	return ret;
 }
 
@@ -850,6 +880,7 @@ int mcs6000_remove_file(struct input_dev *pdev)
 	device_remove_file(&pdev->dev, &dev_attr_dl_status);
 	device_remove_file(&pdev->dev, &dev_attr_touch_status);
 	device_remove_file(&pdev->dev, &dev_attr_touch_control);
+	device_remove_file(&pdev->dev, &dev_attr_poll);
 	return 0;
 }
 static int mcs6000_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -874,6 +905,8 @@ static int mcs6000_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	dev = &mcs6000_ts_dev;
 
 	INIT_DELAYED_WORK(&dev->work, mcs6000_work);
+
+	dev->poll_interval = 1;
 
 	dev->power = ts_pdata->power;	
 	dev->num_irq = client->irq;
