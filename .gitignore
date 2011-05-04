@@ -111,5 +111,7 @@ scripts/mod/elfconfig.h
 scripts/mod/mk_elfconfig
 scripts/mod/modpost
 arch/arm/boot/compressed/lib1funcs.S
+arch/arm/mach-msm/smd_rpc_sym.c
+
 
 \#*#
