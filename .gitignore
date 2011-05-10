@@ -110,6 +110,7 @@ scripts/kconfig/zconf.tab.c
 scripts/mod/elfconfig.h
 scripts/mod/mk_elfconfig
 scripts/mod/modpost
+arch/arm/boot/compressed/lib1funcs.S
 
 
 \#*#
